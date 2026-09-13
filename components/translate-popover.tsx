@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CheckIcon, PlusIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,15 +12,15 @@ export interface TranslateTarget {
   rect: DOMRect;
 }
 
-interface Result {
+export interface TranslateResult {
   translation?: string;
   note?: string;
   error?: string;
 }
 
-const clientCache = new Map<string, Promise<Result>>();
+const clientCache = new Map<string, Promise<TranslateResult>>();
 
-function lookup(text: string, context?: string): Promise<Result> {
+function lookup(text: string, context?: string): Promise<TranslateResult> {
   const key = `${text.toLowerCase()}|${context ?? ""}`;
   const cached = clientCache.get(key);
   if (cached) return cached;
@@ -28,10 +29,10 @@ function lookup(text: string, context?: string): Promise<Result> {
   const promise = fetch(`/api/translate?${params}`)
     .then(async (res) => {
       const body = await res.json().catch(() => ({}));
-      if (!res.ok) return { error: body.error ?? `Request failed (${res.status})` } as Result;
+      if (!res.ok) return { error: body.error ?? `Request failed (${res.status})` } as TranslateResult;
       return { translation: body.translation as string, note: body.note as string | undefined };
     })
-    .catch((err: Error) => ({ error: err.message }) as Result);
+    .catch((err: Error) => ({ error: err.message }) as TranslateResult);
   clientCache.set(key, promise);
   promise.then((r) => {
     if (r.error) clientCache.delete(key); // let the user retry after a failure
@@ -41,10 +42,19 @@ function lookup(text: string, context?: string): Promise<Result> {
 
 const GAP = 8;
 
-/** Small tooltip that shows the English meaning of a French word or phrase. */
-export function TranslatePopover({ target }: { target: TranslateTarget | null }) {
-  const [result, setResult] = useState<Result | null>(null);
-  const [pos, setPos] = useState<{ top: number; left: number; below: boolean } | null>(null);
+interface Props {
+  target: TranslateTarget | null;
+  /** Whether the target's French text is already in the vocabulary list. */
+  saved: boolean;
+  onAdd: (french: string, result: TranslateResult) => void;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+}
+
+/** Small tooltip that shows the English meaning of a French word or phrase, with an "Add" button. */
+export function TranslatePopover({ target, saved, onAdd, onMouseEnter, onMouseLeave }: Props) {
+  const [result, setResult] = useState<TranslateResult | null>(null);
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -73,8 +83,8 @@ export function TranslatePopover({ target }: { target: TranslateTarget | null })
     const below = rect.top - height - GAP < 4;
     const top = below ? rect.bottom + GAP : rect.top - height - GAP;
     const left = Math.min(Math.max(8, rect.left + rect.width / 2 - width / 2), window.innerWidth - width - 8);
-    setPos({ top, left, below });
-  }, [target, result]);
+    setPos({ top, left });
+  }, [target, result, saved]);
 
   if (!target) return null;
 
@@ -83,8 +93,10 @@ export function TranslatePopover({ target }: { target: TranslateTarget | null })
       ref={ref}
       role="tooltip"
       data-slot="translate-popover"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
       className={cn(
-        "pointer-events-none fixed z-50 max-w-72 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-md",
+        "fixed z-50 max-w-72 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-md",
         "animate-in fade-in-0 zoom-in-95 duration-100",
         pos ? "visible" : "invisible",
       )}
@@ -94,10 +106,26 @@ export function TranslatePopover({ target }: { target: TranslateTarget | null })
       {!result && <div className="text-background/80">Translating…</div>}
       {result?.error && <div className="text-destructive-foreground/90">{result.error}</div>}
       {result?.translation && (
-        <>
-          <div className="font-medium">{result.translation}</div>
-          {result.note && <div className="text-background/70">{result.note}</div>}
-        </>
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="font-medium">{result.translation}</div>
+            {result.note && <div className="text-background/70">{result.note}</div>}
+          </div>
+          <button
+            type="button"
+            data-slot="vocab-add"
+            disabled={saved}
+            onClick={() => onAdd(target.text, result)}
+            aria-label={saved ? "Saved to vocabulary" : "Add to vocabulary"}
+            className={cn(
+              "mt-px inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+              saved ? "bg-background/10 text-background/70" : "bg-background/15 text-background hover:bg-background/25",
+            )}
+          >
+            {saved ? <CheckIcon className="size-3" /> : <PlusIcon className="size-3" />}
+            {saved ? "Saved" : "Add"}
+          </button>
+        </div>
       )}
     </div>
   );

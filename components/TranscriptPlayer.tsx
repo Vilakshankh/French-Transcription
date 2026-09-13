@@ -5,6 +5,8 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import TranscriptPanel from "@/components/TranscriptPanel";
 import YouTubePlayer, { PlayerState, type YTPlayer } from "@/components/YouTubePlayer";
 import { ThemeToggle } from "@/components/theme-toggle";
+import type { TranslateResult } from "@/components/translate-popover";
+import { VocabularyPanel } from "@/components/vocabulary-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -13,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import { useVocabulary } from "@/hooks/use-vocabulary";
 import { parseVideoId, type TranscriptData } from "@/lib/youtube";
 
 const POLL_MS = 100;
@@ -38,6 +41,15 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
 
   const playerRef = useRef<YTPlayer | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const vocabulary = useVocabulary();
+
+  const handleAddVocab = useCallback(
+    (french: string, result: TranslateResult, time: number) => {
+      if (!result.translation) return;
+      vocabulary.add({ french, english: result.translation, note: result.note, videoId, time: Math.floor(time) });
+    },
+    [vocabulary, videoId],
+  );
 
   // ----- transcript loading -----
   useEffect(() => {
@@ -165,23 +177,21 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
         </div>
       </header>
 
-      <main className="mx-auto grid w-full max-w-7xl flex-1 gap-4 p-4 lg:grid-cols-[minmax(0,2fr)_minmax(340px,1fr)]">
-        <section className="flex min-w-0 flex-col gap-2">
+      <main className="mx-auto grid w-full max-w-7xl flex-1 items-start gap-4 p-4 lg:grid-cols-[minmax(0,2fr)_minmax(320px,1fr)]">
+        <section className="flex min-w-0 flex-col gap-3">
           <YouTubePlayer
             videoId={videoId}
             onReady={handlePlayerReady}
             onStateChange={handleStateChange}
             onError={(message) => setPlayerMessage({ text: message, error: true })}
           />
-          <p
-            className={playerMessage?.error ? "min-h-5 text-sm text-destructive" : "min-h-5 text-sm text-muted-foreground"}
-            role={playerMessage?.error ? "alert" : undefined}
-          >
-            {playerMessage?.text ?? ""}
-          </p>
-        </section>
+          {playerMessage && (
+            <p className={playerMessage.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"} role={playerMessage.error ? "alert" : undefined}>
+              {playerMessage.text}
+            </p>
+          )}
 
-        <Card className="flex max-h-[70svh] min-h-80 flex-col gap-0 py-0 lg:max-h-[calc(100svh-7rem)]">
+        <Card className="flex h-[26rem] max-h-[60svh] min-h-64 flex-col gap-0 py-0" data-slot="transcript-panel">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
             <div className="flex items-center gap-2">
               <span className="font-heading text-sm font-medium">Transcript</span>
@@ -233,10 +243,22 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
                 stream={stream}
                 autoScroll={autoScroll}
                 onSeek={handleSeek}
+                isSaved={vocabulary.has}
+                onAddVocab={handleAddVocab}
               />
             )}
           </div>
         </Card>
+        </section>
+
+        <VocabularyPanel
+          entries={vocabulary.entries}
+          currentVideoId={videoId}
+          onRemove={vocabulary.remove}
+          onClear={vocabulary.clear}
+          onSeek={handleSeek}
+          className="max-h-[70svh] min-h-64 lg:sticky lg:top-4 lg:max-h-[calc(100svh-6rem)]"
+        />
       </main>
     </div>
   );

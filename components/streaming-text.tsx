@@ -38,7 +38,7 @@ export function StreamingText({ text, progress, caret = false, className }: Stre
       {caret && (
         <span
           aria-hidden="true"
-          className="ml-0.5 inline-block h-[1em] w-0.5 translate-y-[0.15em] animate-pulse rounded-full bg-primary align-baseline"
+          className="ml-0.5 inline-block h-[1em] w-0.5 animate-pulse rounded-full bg-primary align-middle"
         />
       )}
     </span>
