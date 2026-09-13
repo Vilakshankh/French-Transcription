@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { CheckIcon, PlusIcon } from "lucide-react";
 
-import { Orb } from "@/components/orb";
+import { Orb } from "@aicss/react/orbs";
 import { cn } from "@/lib/utils";
 
 export interface TranslateTarget {
@@ -125,7 +125,13 @@ export function TranslatePopover({ target, saved, onAdd, onMouseEnter, onMouseLe
       <div className="mt-2">
         {!result && (
           <div className="flex items-center gap-2 text-[13px] text-background/80" data-slot="translate-thinking">
-            <Orb />
+            <Orb
+              variant="S2"
+              size={18}
+              label="Translating"
+              // The tooltip is inverted, so ink the orb with the page background colour.
+              style={{ "--orb-fg": "var(--background)" } as CSSProperties}
+            />
             Translating…
           </div>
         )}
