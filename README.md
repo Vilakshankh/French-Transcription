@@ -22,8 +22,9 @@ Production: `npm run build && npm start`. The app also deploys to Vercel with no
   `components/TranscriptPanel.tsx`, which groups the captions by minute (each minute starts a new
   paragraph with a clickable time mark), streams the words of the line being spoken with
   `components/streaming-text.tsx`, keeps the current line in view, and seeks the video when you click
-  a line or a time mark. The "Stream" switch shows the full transcript instead, with the current
-  line highlighted.
+  a line or a time mark. The gear button opens transcript settings: Stream (reveal words as spoken,
+  or show the whole transcript with the current line highlighted), Auto-scroll, and Hover translate.
+  Settings are remembered in the browser.
 - `app/api/transcript/route.ts` (`GET /api/transcript?v=<id>&lang=<code>`) fetches the caption
   track list from YouTube on the server (browsers can't call YouTube's caption endpoints directly),
   prefers a human-made French track, then auto-generated French, then English, then whatever exists,
