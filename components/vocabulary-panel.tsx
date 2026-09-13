@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { DownloadIcon, Trash2Icon, XIcon } from "lucide-react";
+
+import { StreamingText } from "@/components/streaming-text";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,6 +33,10 @@ function exportCsv(entries: VocabEntry[]) {
 }
 
 export function VocabularyPanel({ entries, currentVideoId, onRemove, onClear, onSeek, className }: Props) {
+  // Rows present on first render appear instantly; rows added later stream in.
+  const initialIds = useRef<Set<string> | null>(null);
+  if (initialIds.current === null) initialIds.current = new Set(entries.map((e) => e.id));
+
   return (
     <Card className={cn("flex flex-col gap-0 py-0", className)} data-slot="vocabulary-panel">
       <div className="flex items-center gap-2 px-4 py-3">
@@ -55,8 +62,8 @@ export function VocabularyPanel({ entries, currentVideoId, onRemove, onClear, on
       <Separator />
 
       <div className="grid grid-cols-[1fr_1fr_auto] gap-x-3 px-4 py-2 text-xs font-medium text-muted-foreground">
-        <span>Français</span>
-        <span>English</span>
+        <span className="text-red-600 dark:text-red-400">Français</span>
+        <span className="text-blue-600 dark:text-blue-400">English</span>
         <span className="w-7" aria-hidden="true" />
       </div>
 
@@ -69,6 +76,7 @@ export function VocabularyPanel({ entries, currentVideoId, onRemove, onClear, on
           <ul className="divide-y">
             {entries.map((entry) => {
               const canSeek = entry.videoId === currentVideoId && typeof entry.time === "number";
+              const isNew = !initialIds.current?.has(entry.id);
               return (
                 <li key={entry.id} className="grid grid-cols-[1fr_1fr_auto] items-start gap-x-3 px-4 py-2 text-sm" data-slot="vocab-row">
                   <div className="min-w-0">
@@ -78,18 +86,20 @@ export function VocabularyPanel({ entries, currentVideoId, onRemove, onClear, on
                       disabled={!canSeek}
                       title={canSeek ? `Jump to ${formatTime(entry.time!)}` : undefined}
                       className={cn(
-                        "max-w-full truncate text-left font-medium",
+                        "max-w-full truncate text-left font-medium text-red-600 dark:text-red-400",
                         canSeek && "cursor-pointer hover:underline hover:underline-offset-4 hover:decoration-dotted",
                       )}
                     >
-                      {entry.french}
+                      {isNew ? <StreamingText text={entry.french} /> : entry.french}
                     </button>
                     {typeof entry.time === "number" && (
                       <div className="font-mono text-[11px] tabular-nums text-muted-foreground">{formatTime(entry.time)}</div>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <div className="break-words">{entry.english}</div>
+                    <div className="break-words text-blue-600 dark:text-blue-400">
+                      {isNew ? <StreamingText text={entry.english} duration={800} /> : entry.english}
+                    </div>
                     {entry.note && <div className="text-xs text-muted-foreground">{entry.note}</div>}
                   </div>
                   <Button variant="ghost" size="icon-xs" aria-label={`Remove ${entry.french}`} onClick={() => onRemove(entry.id)}>

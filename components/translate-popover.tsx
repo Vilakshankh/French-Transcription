@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { CheckIcon, PlusIcon } from "lucide-react";
 
+import { Orb } from "@/components/orb";
 import { cn } from "@/lib/utils";
 
 export interface TranslateTarget {
@@ -103,7 +104,7 @@ export function TranslatePopover({ target, saved, onAdd, onMouseEnter, onMouseLe
       style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0 }}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="truncate text-[13px] font-medium text-background/70">{target.text}</div>
+        <div className="truncate text-[13px] font-medium text-red-300 dark:text-red-700">{target.text}</div>
         {result?.translation && (
           <button
             type="button"
@@ -122,11 +123,16 @@ export function TranslatePopover({ target, saved, onAdd, onMouseEnter, onMouseLe
         )}
       </div>
       <div className="mt-2">
-        {!result && <div className="text-[13px] text-background/80">Translating…</div>}
+        {!result && (
+          <div className="flex items-center gap-2 text-[13px] text-background/80" data-slot="translate-thinking">
+            <Orb />
+            Translating…
+          </div>
+        )}
         {result?.error && <div className="text-[13px] text-destructive-foreground/90">{result.error}</div>}
         {result?.translation && (
           <>
-            <div className="text-[15px] font-medium leading-snug">{result.translation}</div>
+            <div className="text-[15px] font-medium leading-snug text-blue-300 dark:text-blue-700">{result.translation}</div>
             {result.note && <div className="mt-0.5 text-xs text-background/70">{result.note}</div>}
           </>
         )}

@@ -1,14 +1,16 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import { cleanWord } from "@/lib/youtube";
 
 interface StreamingTextProps {
   text: string;
-  /** 0..1 — how much of the text has "arrived". */
-  progress: number;
+  /** 0..1 — how much of the text has "arrived". Omit to animate from 0 to 1 over `duration` ms. */
+  progress?: number;
+  /** Duration of the self-driven reveal when `progress` is omitted. */
+  duration?: number;
   /** Show a blinking caret after the last revealed word. */
   caret?: boolean;
   className?: string;
@@ -18,9 +20,10 @@ interface StreamingTextProps {
  * Reveals text word by word, like a streaming response. Each newly revealed word
  * fades in; already-revealed words stay put so the paragraph only ever grows.
  */
-export function StreamingText({ text, progress, caret = false, className }: StreamingTextProps) {
+export function StreamingText({ text, progress, duration = 600, caret = false, className }: StreamingTextProps) {
   const words = useMemo(() => text.split(/\s+/).filter(Boolean), [text]);
-  const clamped = Math.min(1, Math.max(0, progress));
+  const auto = useAutoProgress(progress === undefined, duration);
+  const clamped = Math.min(1, Math.max(0, progress ?? auto));
   const visible = Math.min(words.length, Math.ceil(clamped * words.length));
 
   return (
@@ -43,4 +46,22 @@ export function StreamingText({ text, progress, caret = false, className }: Stre
       )}
     </span>
   );
+}
+
+/** Drives progress from 0 to 1 over `duration` ms when `enabled`, otherwise stays at 1. */
+function useAutoProgress(enabled: boolean, duration: number): number {
+  const [value, setValue] = useState(enabled ? 0 : 1);
+  useEffect(() => {
+    if (!enabled) return;
+    const start = performance.now();
+    let frame = 0;
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / duration);
+      setValue(p);
+      if (p < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [enabled, duration]);
+  return value;
 }
