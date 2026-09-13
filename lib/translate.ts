@@ -99,20 +99,59 @@ async function translateWithClaude(text: string, context?: string): Promise<Tran
 
 // ---------- MyMemory ----------
 
+interface MyMemoryMatch {
+  segment?: string;
+  translation?: string;
+  quality?: string | number;
+  match?: number;
+  "created-by"?: string;
+}
+
+interface MyMemoryBody {
+  responseStatus?: number | string;
+  responseDetails?: string;
+  responseData?: { translatedText?: string };
+  matches?: MyMemoryMatch[] | string;
+}
+
+const normalize = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[«»"'“”‘’(\[{.,;:!?…—–-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * MyMemory is a translation memory, not a dictionary: its top result can be a crowd-sourced
+ * segment that happens to contain the query (e.g. "c'est" -> "budget, this is"). Prefer the
+ * machine-translation candidate whose segment is exactly the query, then the best-quality exact
+ * match, before falling back to whatever MyMemory ranked first.
+ */
+export function pickMyMemoryTranslation(body: MyMemoryBody, query: string): string | undefined {
+  const matches = Array.isArray(body.matches) ? body.matches : [];
+  const wanted = normalize(query);
+  const usable = matches.filter((m) => m.translation?.trim());
+  const exact = usable.filter((m) => normalize(m.segment ?? "") === wanted);
+  const isMachine = (m: MyMemoryMatch) => (m["created-by"] ?? "").toUpperCase().startsWith("MT");
+  const score = (m: MyMemoryMatch) => Number(m.quality ?? 0) * 1000 + Number(m.match ?? 0);
+
+  const best =
+    exact.find(isMachine) ??
+    [...exact].sort((a, b) => score(b) - score(a))[0] ??
+    usable.find(isMachine);
+  return (best?.translation ?? body.responseData?.translatedText)?.trim() || undefined;
+}
+
 async function translateWithMyMemory(text: string): Promise<Translation> {
   const params = new URLSearchParams({ q: text, langpair: "fr|en" });
   if (process.env.MYMEMORY_EMAIL) params.set("de", process.env.MYMEMORY_EMAIL); // raises the daily quota
   const res = await fetch(`https://api.mymemory.translated.net/get?${params}`, { cache: "no-store" });
   if (!res.ok) throw new TranslateError(`Translation service responded with HTTP ${res.status}.`, 502);
-  const body = (await res.json()) as {
-    responseStatus?: number | string;
-    responseDetails?: string;
-    responseData?: { translatedText?: string };
-  };
+  const body = (await res.json()) as MyMemoryBody;
   const status = Number(body.responseStatus);
   if (status === 429) throw new TranslateError("Daily translation quota reached. Set MYMEMORY_EMAIL or ANTHROPIC_API_KEY.", 429);
-  const translated = body.responseData?.translatedText?.trim();
-  if (status !== 200 || !translated) {
+  const translated = status === 200 ? pickMyMemoryTranslation(body, text) : undefined;
+  if (!translated) {
     throw new TranslateError(body.responseDetails || "Translation service returned no result.", 502);
   }
   return { source: text, translation: decodeEntities(translated), provider: "mymemory" };
