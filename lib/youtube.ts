@@ -61,3 +61,10 @@ export function findCueIndex(cues: Cue[], t: number): number {
   }
   return ans;
 }
+
+const EDGE_PUNCTUATION = /^[\s«»"'“”‘’(\[{.,;:!?…—–-]+|[\s«»"'“”‘’)\]}.,;:!?…—–-]+$/g;
+
+/** Strips surrounding punctuation from a token so "«Bonjour," becomes "Bonjour". */
+export function cleanWord(token: string): string {
+  return token.replace(EDGE_PUNCTUATION, "");
+}

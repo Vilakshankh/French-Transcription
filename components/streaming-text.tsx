@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
+import { cleanWord } from "@/lib/youtube";
 
 interface StreamingTextProps {
   text: string;
@@ -27,6 +28,7 @@ export function StreamingText({ text, progress, caret = false, className }: Stre
       {words.slice(0, visible).map((word, i) => (
         <span
           key={i}
+          data-word={cleanWord(word) || undefined}
           className="animate-in fade-in duration-300 inline"
         >
           {word}
