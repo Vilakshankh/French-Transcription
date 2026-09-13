@@ -14,6 +14,8 @@ interface Props {
   /** Reveal text as it is spoken (true) or show the whole transcript (false). */
   stream: boolean;
   autoScroll: boolean;
+  /** Show a translation tooltip when hovering a word. Selecting a phrase always translates. */
+  hoverTranslate: boolean;
   onSeek: (seconds: number) => void;
   /** Whether a French word or phrase is already saved in the vocabulary list. */
   isSaved: (french: string) => boolean;
@@ -73,7 +75,7 @@ function hasTextSelection(): boolean {
   return Boolean(window.getSelection()?.toString().trim());
 }
 
-export default function TranscriptPanel({ cues, currentTime, stream, autoScroll, onSeek, isSaved, onAddVocab }: Props) {
+export default function TranscriptPanel({ cues, currentTime, stream, autoScroll, hoverTranslate, onSeek, isSaved, onAddVocab }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const lastUserScroll = useRef(0);
   const groups = useMemo(() => groupByMinute(cues), [cues]);
@@ -118,7 +120,7 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
   );
 
   const handleMouseOver = (e: React.MouseEvent) => {
-    if (pinnedRef.current) return;
+    if (pinnedRef.current || !hoverTranslate) return;
     const el = (e.target as HTMLElement).closest<HTMLElement>("[data-word]");
     if (!el) return;
     if (el === hoveredEl.current) {
@@ -188,6 +190,11 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
     clearHoverTimer();
     clearHideTimer();
   }, []);
+
+  useEffect(() => {
+    if (!hoverTranslate && !pinnedRef.current) hideHover();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hoverTranslate]);
 
   const markUserScroll = () => {
     lastUserScroll.current = Date.now();
@@ -268,7 +275,8 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
                       data-past={isPast || undefined}
                       onClick={seek}
                       className={cn(
-                        "cursor-pointer rounded-sm transition-colors [&_[data-word]:hover]:underline [&_[data-word]:hover]:decoration-dotted [&_[data-word]:hover]:underline-offset-4",
+                        "cursor-pointer rounded-sm transition-colors",
+                        hoverTranslate && "[&_[data-word]:hover]:underline [&_[data-word]:hover]:decoration-dotted [&_[data-word]:hover]:underline-offset-4",
                         isPast && "text-foreground/85 hover:text-foreground",
                         !isPast && !isActive && "text-muted-foreground/70 hover:text-foreground",
                         isActive && !stream && "-mx-0.5 box-decoration-clone bg-primary/10 px-0.5 text-foreground",

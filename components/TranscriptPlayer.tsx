@@ -5,16 +5,16 @@ import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import TranscriptPanel from "@/components/TranscriptPanel";
 import YouTubePlayer, { PlayerState, type YTPlayer } from "@/components/YouTubePlayer";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TranscriptSettingsPanel } from "@/components/transcript-settings";
 import type { TranslateResult } from "@/components/translate-popover";
 import { VocabularyPanel } from "@/components/vocabulary-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
+import { useSettings } from "@/hooks/use-settings";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { parseVideoId, type TranscriptData } from "@/lib/youtube";
 
@@ -35,8 +35,7 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
   const [lang, setLang] = useState<string | undefined>(undefined);
   const [transcript, setTranscript] = useState<LoadState>({ status: "loading" });
   const [currentTime, setCurrentTime] = useState(0);
-  const [stream, setStream] = useState(true);
-  const [autoScroll, setAutoScroll] = useState(true);
+  const { settings, update: updateSetting } = useSettings();
   const [playerMessage, setPlayerMessage] = useState<{ text: string; error: boolean } | null>(null);
 
   const playerRef = useRef<YTPlayer | null>(null);
@@ -215,14 +214,7 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
                   ))}
                 </SelectContent>
               </Select>
-              <Label className="gap-2">
-                <Switch size="sm" checked={stream} onCheckedChange={setStream} aria-label="Stream text as it is spoken" />
-                Stream
-              </Label>
-              <Label className="gap-2">
-                <Switch size="sm" checked={autoScroll} onCheckedChange={setAutoScroll} aria-label="Auto-scroll" />
-                Auto-scroll
-              </Label>
+              <TranscriptSettingsPanel settings={settings} onChange={updateSetting} />
             </div>
           </div>
           <Separator />
@@ -240,8 +232,9 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
               <TranscriptPanel
                 cues={data.cues}
                 currentTime={currentTime}
-                stream={stream}
-                autoScroll={autoScroll}
+                stream={settings.stream}
+                autoScroll={settings.autoScroll}
+                hoverTranslate={settings.hoverTranslate}
                 onSeek={handleSeek}
                 isSaved={vocabulary.has}
                 onAddVocab={handleAddVocab}
