@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { StreamingText } from "@/components/streaming-text";
 import { TranslatePopover, type TranslateResult, type TranslateTarget } from "@/components/translate-popover";
+import { TEXT_SIZE_CLASSES, type TextSize } from "@/hooks/use-settings";
 import { cn } from "@/lib/utils";
 import { cleanWord, findCueIndex, formatTime, type Cue } from "@/lib/youtube";
 
@@ -16,6 +17,7 @@ interface Props {
   autoScroll: boolean;
   /** Show a translation tooltip when hovering a word. Selecting a phrase always translates. */
   hoverTranslate: boolean;
+  textSize: TextSize;
   onSeek: (seconds: number) => void;
   /** Whether a French word or phrase is already saved in the vocabulary list. */
   isSaved: (french: string) => boolean;
@@ -75,7 +77,7 @@ function hasTextSelection(): boolean {
   return Boolean(window.getSelection()?.toString().trim());
 }
 
-export default function TranscriptPanel({ cues, currentTime, stream, autoScroll, hoverTranslate, onSeek, isSaved, onAddVocab }: Props) {
+export default function TranscriptPanel({ cues, currentTime, stream, autoScroll, hoverTranslate, textSize, onSeek, isSaved, onAddVocab }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const lastUserScroll = useRef(0);
   const groups = useMemo(() => groupByMinute(cues), [cues]);
@@ -257,7 +259,7 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
               >
                 {formatTime(minuteStart)}
               </button>
-              <p className="text-sm leading-7 text-pretty">
+              <p className={cn("text-pretty", TEXT_SIZE_CLASSES[textSize])}>
                 {group.cues.map(({ cue, index }) => {
                   const isActive = index === activeIndex;
                   const isPast = index < activeIndex;
@@ -279,7 +281,7 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
                         hoverTranslate && "[&_[data-word]:hover]:underline [&_[data-word]:hover]:decoration-dotted [&_[data-word]:hover]:underline-offset-4",
                         isPast && "text-foreground/85 hover:text-foreground",
                         !isPast && !isActive && "text-muted-foreground/70 hover:text-foreground",
-                        isActive && !stream && "-mx-0.5 box-decoration-clone bg-primary/10 px-0.5 text-foreground",
+                        isActive && !stream && "-mx-0.5 box-decoration-clone bg-yellow-200/70 px-0.5 text-foreground dark:bg-yellow-400/25",
                         isActive && stream && "text-foreground",
                       )}
                     >

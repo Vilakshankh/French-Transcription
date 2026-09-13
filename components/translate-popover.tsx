@@ -96,37 +96,41 @@ export function TranslatePopover({ target, saved, onAdd, onMouseEnter, onMouseLe
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={cn(
-        "fixed z-50 max-w-72 rounded-md bg-foreground px-3 py-1.5 text-xs text-background shadow-md",
+        "fixed z-50 min-w-44 max-w-80 rounded-lg bg-foreground px-3.5 py-2.5 text-background shadow-lg",
         "animate-in fade-in-0 zoom-in-95 duration-100",
         pos ? "visible" : "invisible",
       )}
       style={pos ? { top: pos.top, left: pos.left } : { top: 0, left: 0 }}
     >
-      <div className="truncate font-medium text-background/70">{target.text}</div>
-      {!result && <div className="text-background/80">Translating…</div>}
-      {result?.error && <div className="text-destructive-foreground/90">{result.error}</div>}
-      {result?.translation && (
-        <div className="flex items-start gap-2">
-          <div className="min-w-0 flex-1">
-            <div className="font-medium">{result.translation}</div>
-            {result.note && <div className="text-background/70">{result.note}</div>}
-          </div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="truncate text-[13px] font-medium text-background/70">{target.text}</div>
+        {result?.translation && (
           <button
             type="button"
             data-slot="vocab-add"
             disabled={saved}
             onClick={() => onAdd(target.text, result)}
             aria-label={saved ? "Saved to vocabulary" : "Add to vocabulary"}
+            title={saved ? "Saved to vocabulary" : "Add to vocabulary"}
             className={cn(
-              "mt-px inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-medium transition-colors",
+              "inline-flex size-6 shrink-0 items-center justify-center rounded-md transition-colors",
               saved ? "bg-background/10 text-background/70" : "bg-background/15 text-background hover:bg-background/25",
             )}
           >
-            {saved ? <CheckIcon className="size-3" /> : <PlusIcon className="size-3" />}
-            {saved ? "Saved" : "Add"}
+            {saved ? <CheckIcon className="size-3.5" /> : <PlusIcon className="size-3.5" />}
           </button>
-        </div>
-      )}
+        )}
+      </div>
+      <div className="mt-2">
+        {!result && <div className="text-[13px] text-background/80">Translating…</div>}
+        {result?.error && <div className="text-[13px] text-destructive-foreground/90">{result.error}</div>}
+        {result?.translation && (
+          <>
+            <div className="text-[15px] font-medium leading-snug">{result.translation}</div>
+            {result.note && <div className="mt-0.5 text-xs text-background/70">{result.note}</div>}
+          </>
+        )}
+      </div>
     </div>
   );
 }
