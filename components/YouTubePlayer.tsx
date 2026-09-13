@@ -135,5 +135,10 @@ export default function YouTubePlayer({ videoId, onReady, onStateChange, onError
     }
   }, [videoId]);
 
-  return <div ref={containerRef} className="player-frame" />;
+  return (
+    <div
+      ref={containerRef}
+      className="relative aspect-video w-full overflow-hidden rounded-xl bg-black ring-1 ring-foreground/10 [&_iframe]:absolute [&_iframe]:inset-0 [&_iframe]:size-full [&_iframe]:border-0"
+    />
+  );
 }
