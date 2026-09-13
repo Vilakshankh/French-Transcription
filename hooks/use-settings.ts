@@ -9,9 +9,26 @@ export interface TranscriptSettings {
   autoScroll: boolean;
   /** Show an English translation when hovering a word. */
   hoverTranslate: boolean;
+  /** Transcript text size. */
+  textSize: TextSize;
 }
 
-export const DEFAULT_SETTINGS: TranscriptSettings = { stream: true, autoScroll: true, hoverTranslate: true };
+export type TextSize = "sm" | "md" | "lg";
+
+export const TEXT_SIZES: { value: TextSize; label: string }[] = [
+  { value: "sm", label: "Small" },
+  { value: "md", label: "Medium" },
+  { value: "lg", label: "Large" },
+];
+
+/** Tailwind classes for each transcript text size. */
+export const TEXT_SIZE_CLASSES: Record<TextSize, string> = {
+  sm: "text-sm leading-7",
+  md: "text-base leading-8",
+  lg: "text-lg leading-9",
+};
+
+export const DEFAULT_SETTINGS: TranscriptSettings = { stream: true, autoScroll: true, hoverTranslate: true, textSize: "sm" };
 
 const STORAGE_KEY = "french-transcription:settings";
 

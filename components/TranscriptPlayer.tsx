@@ -235,6 +235,7 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
                 stream={settings.stream}
                 autoScroll={settings.autoScroll}
                 hoverTranslate={settings.hoverTranslate}
+                textSize={settings.textSize}
                 onSeek={handleSeek}
                 isSaved={vocabulary.has}
                 onAddVocab={handleAddVocab}
