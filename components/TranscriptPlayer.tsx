@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useSettings } from "@/hooks/use-settings";
+import { playSound } from "@/lib/sounds";
 import { useVocabulary } from "@/hooks/use-vocabulary";
 import { parseVideoId, type TranscriptData } from "@/lib/youtube";
 
@@ -44,8 +45,9 @@ export default function TranscriptPlayer({ initialVideoId }: Props) {
 
   const handleAddVocab = useCallback(
     (french: string, result: TranslateResult, time: number) => {
-      if (!result.translation) return;
+      if (!result.translation || vocabulary.has(french)) return;
       vocabulary.add({ french, english: result.translation, note: result.note, videoId, time: Math.floor(time) });
+      playSound("success");
     },
     [vocabulary, videoId],
   );
