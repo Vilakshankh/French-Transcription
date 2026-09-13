@@ -30,6 +30,18 @@ Production: `npm run build && npm start`. The app also deploys to Vercel with no
   and returns `{ start, dur, text }` cues. Results are cached in memory for an hour.
 - `lib/transcript.ts` holds the fetcher and XML parser; `lib/youtube.ts` holds shared helpers.
 
+## Hover translation
+
+Hover any word in the transcript to see its English meaning; select a phrase to translate the whole
+phrase (the tooltip stays until you click elsewhere). Lookups go through `GET /api/translate`, with
+two backends in `lib/translate.ts`:
+
+- **Claude** (used when `ANTHROPIC_API_KEY` is set): context-aware, so the meaning matches how the
+  word is used in that sentence, with a short note such as the dictionary form.
+- **MyMemory** (default, no key): the free translation API. Set `MYMEMORY_EMAIL` to raise its quota.
+
+Copy `.env.example` to `.env.local` to configure either. `TRANSLATE_PROVIDER` forces a backend.
+
 ## UI
 
 The UI is built with [shadcn/ui](https://ui.shadcn.com) on Base UI, using the `b4gMUX5Fo` preset
