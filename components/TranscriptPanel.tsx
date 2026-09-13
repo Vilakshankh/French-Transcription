@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { StreamingText } from "@/components/streaming-text";
-import { TranslatePopover, type TranslateTarget } from "@/components/translate-popover";
+import { TranslatePopover, type TranslateResult, type TranslateTarget } from "@/components/translate-popover";
 import { cn } from "@/lib/utils";
 import { cleanWord, findCueIndex, formatTime, type Cue } from "@/lib/youtube";
 
@@ -15,10 +15,14 @@ interface Props {
   stream: boolean;
   autoScroll: boolean;
   onSeek: (seconds: number) => void;
+  /** Whether a French word or phrase is already saved in the vocabulary list. */
+  isSaved: (french: string) => boolean;
+  onAddVocab: (french: string, result: TranslateResult, time: number) => void;
 }
 
 const USER_SCROLL_GRACE_MS = 4000;
 const HOVER_DELAY_MS = 350;
+const HOVER_HIDE_DELAY_MS = 250;
 const MAX_SELECTION_CHARS = 200;
 
 interface MinuteGroup {
@@ -69,7 +73,7 @@ function hasTextSelection(): boolean {
   return Boolean(window.getSelection()?.toString().trim());
 }
 
-export default function TranscriptPanel({ cues, currentTime, stream, autoScroll, onSeek }: Props) {
+export default function TranscriptPanel({ cues, currentTime, stream, autoScroll, onSeek, isSaved, onAddVocab }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const lastUserScroll = useRef(0);
   const groups = useMemo(() => groupByMinute(cues), [cues]);
@@ -79,11 +83,29 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
   const [target, setTarget] = useState<TranslateTarget | null>(null);
   const pinnedRef = useRef(false); // true while showing a selection (survives mouse movement)
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hoveredEl = useRef<HTMLElement | null>(null);
 
   const clearHoverTimer = () => {
     if (hoverTimer.current) clearTimeout(hoverTimer.current);
     hoverTimer.current = null;
+  };
+  const clearHideTimer = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = null;
+  };
+  const hideHover = () => {
+    hoveredEl.current = null;
+    clearHoverTimer();
+    clearHideTimer();
+    setTarget(null);
+  };
+  // Give the pointer a moment to travel from the word into the tooltip (to reach the Add button).
+  const scheduleHide = () => {
+    clearHideTimer();
+    hideTimer.current = setTimeout(() => {
+      if (!pinnedRef.current) hideHover();
+    }, HOVER_HIDE_DELAY_MS);
   };
 
   const contextFor = useCallback(
@@ -98,9 +120,14 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
   const handleMouseOver = (e: React.MouseEvent) => {
     if (pinnedRef.current) return;
     const el = (e.target as HTMLElement).closest<HTMLElement>("[data-word]");
-    if (!el || el === hoveredEl.current) return;
+    if (!el) return;
+    if (el === hoveredEl.current) {
+      clearHideTimer(); // came back to the same word before the tooltip closed
+      return;
+    }
     hoveredEl.current = el;
     clearHoverTimer();
+    clearHideTimer();
     hoverTimer.current = setTimeout(() => {
       const word = el.dataset.word;
       if (!word || hoveredEl.current !== el) return;
@@ -114,9 +141,12 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
     if (!el || el !== hoveredEl.current) return;
     const next = e.relatedTarget as Node | null;
     if (next && el.contains(next)) return;
-    hoveredEl.current = null;
     clearHoverTimer();
-    setTarget(null);
+    if (target) {
+      scheduleHide();
+    } else {
+      hoveredEl.current = null;
+    }
   };
 
   // Selecting a phrase translates the whole phrase and keeps the tooltip open until the next click.
@@ -143,7 +173,8 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
 
   useEffect(() => {
     // A click anywhere dismisses a pinned selection tooltip once the selection is gone.
-    const onMouseDown = () => {
+    const onMouseDown = (e: MouseEvent) => {
+      if ((e.target as Element | null)?.closest?.('[data-slot="translate-popover"]')) return;
       if (pinnedRef.current) {
         pinnedRef.current = false;
         setTarget(null);
@@ -153,7 +184,10 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, []);
 
-  useEffect(() => clearHoverTimer, []);
+  useEffect(() => () => {
+    clearHoverTimer();
+    clearHideTimer();
+  }, []);
 
   const markUserScroll = () => {
     lastUserScroll.current = Date.now();
@@ -161,11 +195,7 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
 
   // Hide the hover tooltip while the panel scrolls, otherwise it drifts away from its word.
   const handleScroll = () => {
-    if (target && !pinnedRef.current) {
-      clearHoverTimer();
-      hoveredEl.current = null;
-      setTarget(null);
-    }
+    if (target && !pinnedRef.current) hideHover();
   };
 
   // Keep the line being spoken in view (unless the user just scrolled themselves).
@@ -241,7 +271,7 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
                         "cursor-pointer rounded-sm transition-colors [&_[data-word]:hover]:underline [&_[data-word]:hover]:decoration-dotted [&_[data-word]:hover]:underline-offset-4",
                         isPast && "text-foreground/85 hover:text-foreground",
                         !isPast && !isActive && "text-muted-foreground/70 hover:text-foreground",
-                        isActive && !stream && "bg-primary/10 px-0.5 text-foreground",
+                        isActive && !stream && "-mx-0.5 box-decoration-clone bg-primary/10 px-0.5 text-foreground",
                         isActive && stream && "text-foreground",
                       )}
                     >
@@ -258,7 +288,15 @@ export default function TranscriptPanel({ cues, currentTime, stream, autoScroll,
           );
         })}
       </div>
-      <TranslatePopover target={target} />
+      <TranslatePopover
+        target={target}
+        saved={target ? isSaved(target.text) : false}
+        onAdd={(french, result) => onAddVocab(french, result, currentTime)}
+        onMouseEnter={clearHideTimer}
+        onMouseLeave={() => {
+          if (!pinnedRef.current) scheduleHide();
+        }}
+      />
     </>
   );
 }

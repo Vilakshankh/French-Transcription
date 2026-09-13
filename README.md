@@ -1,6 +1,6 @@
 # French Transcription
 
-A small Next.js site that plays a YouTube video and shows its transcript beside it, highlighting
+A small Next.js site that plays a YouTube video and shows its transcript beneath it, highlighting
 and scrolling to the current line as the video plays. Click any line to jump the video there.
 
 It starts on [ejVkyXSl63I](https://www.youtube.com/watch?v=ejVkyXSl63I); paste any other YouTube URL
@@ -41,6 +41,13 @@ two backends in `lib/translate.ts`:
 - **MyMemory** (default, no key): the free translation API. Set `MYMEMORY_EMAIL` to raise its quota.
 
 Copy `.env.example` to `.env.local` to configure either. `TRANSLATE_PROVIDER` forces a backend.
+
+## Vocabulary
+
+Press **Add** in a translation tooltip to save the word or phrase. The vocabulary panel on the right
+lists French on the left and English on the right, with the time in the video it was saved from
+(click the French word to jump there). The list lives in your browser's localStorage; use the
+download button to export it as CSV.
 
 ## UI
 
